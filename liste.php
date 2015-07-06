@@ -75,13 +75,31 @@ $objp = $db->fetch_object($resql);
 if($objp->fk_parent==0) {
 	$is_declinaison_master=true;
 	$fk_parent_declinaison = $fk_product;
+	$is_declinaison = false;
 }
 else {
 	$is_declinaison_master=false;
 	$fk_parent_declinaison = $objp->fk_parent;
+	$is_declinaison = true;
 }
 
-if($action=='create_declinaison' && ($user->rights->produit->creer || $user->rights->service->creer) ) {
+                
+if($action=='SAVE_DECLINAISON') {
+	
+    //Le produit est une déclinaison
+    //echo($_REQUEST['up_to_date']);
+    //if($_REQUEST['up_to_date'] == "Oui") {
+    $sql = "UPDATE ".MAIN_DB_PREFIX."declinaison";
+    $sql.= " SET up_to_date = ".( GETPOST('up_to_date') ? 1 : 0 );
+    $sql.= " ,more_price=".(float)GETPOST('more_price');
+    $sql.= " ,more_percent=".(float)GETPOST('more_percent');
+    $sql.= " WHERE fk_declinaison = ".$fk_product;
+
+    $db->query($sql);
+    
+    setEventMessage("Modification enregistrée avec succès");
+}
+else if($action=='create_declinaison' && ($user->rights->produit->creer || $user->rights->service->creer) ) {
 	
 	if(isset($_REQUEST['create_dec'])) { // Uniquement si on se trouve sur une création standard de déclinaison (dans les autres cas on ne crée pas de nouveau produit)
 	
@@ -247,13 +265,16 @@ $form=new Form($db);
             </table><br />      
         <?php
 
+	if($is_declinaison) {
+	    form_declinaison_maj();
+	    liste_iam_a_declinaison($product, $fk_parent_declinaison);
+		print '<p>&nbsp;</p>';
+	}
 
     form_declinaison_create_new($product, $fk_parent_declinaison);
     liste_my_declinaison($product, $fk_parent_declinaison);
     
-    form_declinaison_maj();
-    liste_iam_a_declinaison($product, $fk_parent_declinaison);
-
+	dol_fiche_end();
 
 ?>
 <script type="text/javascript">

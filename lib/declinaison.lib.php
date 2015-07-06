@@ -64,7 +64,7 @@ function form_declinaison_create_new(&$product, $fk_parent_declinaison) {
         $add_ref=chr(65+$num); 
     
         $form = new Form($db);
-    
+   		 print_titre("Créer une déclinaison");
         ?>
         <p>
             <form name="form_declinaison" action="liste.php">
@@ -151,21 +151,9 @@ function form_declinaison_maj($fk_product = 0) {
     global $db, $langs, $conf;
     
         if(empty($fk_product)) $fk_product = GETPOST('fk_product');
-                
-        if(GETPOST('action')=='SAVE_DECLINAISON') {
-            //Le produit est une déclinaison
-            //echo($_REQUEST['up_to_date']);
-            //if($_REQUEST['up_to_date'] == "Oui") {
-            $sql = "UPDATE ".MAIN_DB_PREFIX."declinaison";
-            $sql.= " SET up_to_date = ".( GETPOST('up_to_date') ? 1 : 0 );
-            $sql.= " ,more_price=".(float)GETPOST('more_price');
-            $sql.= " ,more_percent=".(float)GETPOST('more_percent');
-            $sql.= " WHERE fk_declinaison = ".$fk_product;
-
-            $db->query($sql);
-            
-            setEventMessage("Modification enregistrée avec succès");
-        }
+		
+		print_titre("Paramètre de la déclinaison");
+		
         ?>
         
             <form name="priceUpToDate" method="POST" action="<?php echo $_SERVER['PHP_SELF'] ?>" />
@@ -181,7 +169,7 @@ function form_declinaison_maj($fk_product = 0) {
                     ?>
                     <input type="hidden" name="action" value="SAVE_DECLINAISON" />
                     <input type="hidden" name="fk_product" value="<?php echo $fk_product; ?>" />
-                    <table>
+                    <table class="border" width="100%">
                         <tr>
                             <td><?php echo $langs->trans('MirrorPrice'); ?></td><td><input type="checkbox" name="up_to_date" value="1" <?php if ($re->up_to_date){ ?>checked="checked"<?php } ?>/></td>
                          </tr>
@@ -195,7 +183,6 @@ function form_declinaison_maj($fk_product = 0) {
                                                     <input type="submit" name="maintientAJour" value="Valider" />
                         </td></tr>
                     </table>
-                    <!--<?php print $form->selectyesno("sync_price_dec",$object->public,1);?>-->
                     
                 <br />
                 </p>
@@ -205,10 +192,12 @@ function form_declinaison_maj($fk_product = 0) {
     
 }
 
-function liste_my_declinaison(&$product, $fk_parent_declinaison) {
+function liste_my_declinaison(&$product) {
     global $db, $langs, $conf, $htmlother, $form;
     
-    print_titre("Déclinaisons du produit");
+    print_titre("Déclinaisons du produit ".$product->ref);
+    $limit = $conf->liste_limit;
+    
     
     $sql = 'SELECT DISTINCT p.rowid, p.ref, p.label, p.barcode, p.price, p.price_ttc, p.price_base_type,';
     $sql.= ' p.fk_product_type, p.tms as datem,';
@@ -218,7 +207,7 @@ function liste_my_declinaison(&$product, $fk_parent_declinaison) {
     if (! empty($search_categ) || ! empty($catid)) $sql.= ' LEFT JOIN '.MAIN_DB_PREFIX."categorie_product as cp ON p.rowid = cp.fk_product"; // We'll need this table joined to the select in order to filter by categ
     $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_fournisseur_price as pfp ON p.rowid = pfp.fk_product";
     $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."declinaison as d ON d.fk_declinaison = p.rowid";
-    $sql.= ' WHERE p.entity IN ('.getEntity('product', 1).') AND (d.fk_parent='.$fk_parent_declinaison." OR p.rowid=$fk_parent_declinaison)";
+    $sql.= ' WHERE p.entity IN ('.getEntity('product', 1).') AND (d.fk_parent='.$product->id.")";
     if ($sall)
     {
         $sql.= " AND (p.ref LIKE '%".$db->escape($sall)."%' OR p.label LIKE '%".$db->escape($sall)."%' OR p.description LIKE '%".$db->escape($sall)."%' OR p.note LIKE '%".$db->escape($sall)."%'";
@@ -429,7 +418,7 @@ function liste_my_declinaison(&$product, $fk_parent_declinaison) {
 
                 // Label
                 print '<td>'.dol_trunc($objp->label,40);
-            if($is_declinaison_master) print ' <a href="javascript:quickEditProduct('.$objp->rowid.')" class="quickedit">edit</a></td>';
+            	print ' <a href="javascript:quickEditProduct('.$objp->rowid.')" class="quickedit">edit</a></td>';
 
                 // Barcode
                 if (! empty($conf->barcode->enabled))
@@ -509,7 +498,7 @@ function liste_my_declinaison(&$product, $fk_parent_declinaison) {
             $db->free($resql);
 
             print "</table>";
-            print '</div>';
+           
             print '</form>';
             
         
@@ -521,9 +510,12 @@ function liste_my_declinaison(&$product, $fk_parent_declinaison) {
     
 }
 
-function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
-    global $db, $langs, $conf;
-    
+function liste_iam_a_declinaison(&$product, $fk_parent_master) {
+    global $db, $langs, $conf, $htmlother, $form;
+    $limit = $conf->liste_limit;
+	
+	print_titre("Collection auquel appartient le produit ".$product->ref);
+	
     $sql = 'SELECT DISTINCT p.rowid, p.ref, p.label, p.barcode, p.price, p.price_ttc, p.price_base_type,';
     $sql.= ' p.fk_product_type, p.tms as datem,';
     $sql.= ' p.duration, p.tosell, p.tobuy, p.seuil_stock_alerte,';
@@ -532,7 +524,7 @@ function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
     if (! empty($search_categ) || ! empty($catid)) $sql.= ' LEFT JOIN '.MAIN_DB_PREFIX."categorie_product as cp ON p.rowid = cp.fk_product"; // We'll need this table joined to the select in order to filter by categ
     $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."product_fournisseur_price as pfp ON p.rowid = pfp.fk_product";
     $sql.= " LEFT JOIN ".MAIN_DB_PREFIX."declinaison as d ON d.fk_declinaison = p.rowid";
-    $sql.= ' WHERE p.entity IN ('.getEntity('product', 1).') AND (d.fk_parent='.$fk_parent_declinaison." OR p.rowid=$fk_parent_declinaison)";
+    $sql.= ' WHERE p.entity IN ('.getEntity('product', 1).') AND (p.rowid = '.$fk_parent_master.' OR p.rowid='.$product->id.')';
     if ($sall)
     {
         $sql.= " AND (p.ref LIKE '%".$db->escape($sall)."%' OR p.label LIKE '%".$db->escape($sall)."%' OR p.description LIKE '%".$db->escape($sall)."%' OR p.note LIKE '%".$db->escape($sall)."%'";
@@ -588,29 +580,6 @@ function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
             }
         }
 
-        $title=$langs->trans("Declinaison");
-        llxHeader('',$title,$helpurl,'');
-        
-        $head=product_prepare_head($product, $user);
-        $titre=$langs->trans("CardProduct".$product->type);
-        $picto=($product->type==1?'service':'product');
-        dol_fiche_head($head, 'declinaison', $titre, 0, $picto);
-        
-        $prod = new Product($db);
-        $prod->fetch($_REQUEST['fk_product']);      
-        
-        ?>
-            <table class="border" width="100%">
-                <tr>
-                    <td><?php echo $langs->trans("Ref"); ?></td>
-                    <td><?php echo $prod->ref; ?></td>
-                </tr>
-                <tr>
-                    <td><?php echo $langs->trans("Label"); ?></td>
-                    <td><?php echo $prod->libelle; ?></td>
-                </tr>
-            </table><br />      
-        <?php
         // Displays product removal confirmation
         if (GETPOST('delprod')) dol_htmloutput_mesg($langs->trans("ProductDeleted",GETPOST('delprod')));
 
@@ -637,7 +606,7 @@ function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
             print '<input type="hidden" name="type" value="'.$type.'">';
             print '<input type="hidden" name="fk_product" value="'.$fk_product.'">';
 
-            print '<table id="listDeclinaison" class="liste" width="100%">';
+            print '<table id="listIAmDeclinaison" class="liste" width="100%">';
 
             // Filter on categories
             $moreforfilter='';
@@ -761,6 +730,9 @@ function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
                 $product_static->ref = $objp->ref;
                 $product_static->type = $objp->fk_product_type;
                 print $product_static->getNomUrl(1,'',24);
+				
+				if($fk_parent_master == $objp->rowid) print img_picto('Produit maître', 'star');
+				
                 print "</td>\n";
 
                 // Label
@@ -845,7 +817,7 @@ function liste_iam_a_declinaison(&$product, $fk_parent_declinaison) {
             $db->free($resql);
 
             print "</table>";
-            print '</div>';
+           
             print '</form>';
             
         
